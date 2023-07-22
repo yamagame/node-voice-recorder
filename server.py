@@ -23,7 +23,7 @@ app.add_middleware(
 class Transcribe(BaseModel):
     filename: str
 
-@app.post("/transcribe")
+@app.post("/wav/transcribe")
 async def transcribeFromAPI(audio: Transcribe): #recieve data
     outputfile = os.path.join(os.environ.get('WAVE_FILE_DIR', "./work"), Path(audio.filename).stem + ".wav")
 

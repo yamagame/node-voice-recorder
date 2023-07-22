@@ -39,7 +39,7 @@ function main() {
           if (err) throw err
           console.log("The file has been saved!")
         })
-        const res = await fetch("http://127.0.0.1:9002/transcribe", {
+        const res = await fetch("http://127.0.0.1:9002/wav/transcribe", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ filename: path.basename(fpath) }),
