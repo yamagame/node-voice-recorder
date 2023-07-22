@@ -85,7 +85,6 @@ export class Mic {
 
   start() {
     const { bitwidth, endian, channels, rate, encoding, fileType, device } = this.options
-    console.log(this.options)
     const debug = this.debug
     const format = this.format
     if (this.audioProcess === null) {

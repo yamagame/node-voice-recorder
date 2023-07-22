@@ -1,54 +1,56 @@
-import Mic from "~/mic/index"
 import * as fs from "fs"
+import * as path from "path"
+import { Recorder } from "~/recorder"
+import sampleToWavAudio from "~/wav"
+import fetch from "node-fetch"
 
 function main() {
-  const micInstance = new Mic({
-    rate: "16000",
-    channels: "1",
-    debug: false,
-    exitOnSilence: 6,
-    fileType: "wav",
+  const recorder = new Recorder()
+  let count = 0
+  let delay = 0
+  let buffer = []
+  let recording = false
+  recorder.on("voice_stop", () => {
+    console.log("voice_stop")
+    delay = 5
   })
-  const micInputStream = micInstance.getAudioStream()
-
-  const outputFileStream = fs.createWriteStream("./work/output.wav")
-
-  micInputStream.pipe(outputFileStream)
-
-  let chunkCounter = 0
-  micInputStream.on("data", function (data) {
-    console.log("Recieved Input Stream of Size %d: %d", data.length, chunkCounter++)
+  recorder.on("voice_start", () => {
+    recording = true
+    console.log("voice_start")
   })
-
-  micInputStream.on("error", function (err) {
-    console.log("Error in Input Stream: " + err)
+  recorder.on("data", (event) => {
+    buffer.push(event.data)
+    if (!recording) {
+      buffer = buffer.slice(-3)
+    }
   })
-
-  micInputStream.on("startComplete", function () {
-    console.log("Got SIGNAL startComplete")
-  })
-
-  micInputStream.on("stopComplete", function () {
-    console.log("Got SIGNAL stopComplete")
-  })
-
-  micInputStream.on("pauseComplete", function () {
-    console.log("Got SIGNAL pauseComplete")
-  })
-
-  micInputStream.on("resumeComplete", function () {
-    console.log("Got SIGNAL resumeComplete")
-  })
-
-  micInputStream.on("silence", function () {
-    console.log("Got SIGNAL silence")
-  })
-
-  micInputStream.on("processExitComplete", function () {
-    console.log("Got SIGNAL processExitComplete")
-  })
-
-  micInstance.start()
+  setInterval(async () => {
+    if (delay > 0) {
+      delay--
+      if (delay === 0 && recording) {
+        recording = false
+        const wavdata = sampleToWavAudio(buffer, {
+          sampleSize: 16,
+          sampleRate: 48000,
+          channelCount: 1,
+        })
+        const fpath = path.join("./work", `${count++}.wav`)
+        fs.writeFile(fpath, wavdata, (err) => {
+          if (err) throw err
+          console.log("The file has been saved!")
+        })
+        const res = await fetch("http://127.0.0.1:9002/transcribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filename: path.basename(fpath) }),
+        })
+        console.log(await res.json())
+        buffer = buffer.slice(-3)
+      }
+    }
+  }, 100)
+  // const outputFileStream = fs.createWriteStream("./work/output.wav")
+  // recorder.micInputStream.pipe(outputFileStream)
 }
 
 if (require.main === module) {
