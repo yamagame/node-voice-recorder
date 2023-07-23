@@ -137,7 +137,7 @@ export class Mic {
         )
       }
 
-      this.audioProcess.on("exit", function (code, sig) {
+      this.audioProcess.on("exit", (code, sig) => {
         if (code != null && sig === null) {
           this.audioStream.emit("audioProcessExitComplete")
           if (debug) console.log("recording audioProcess has exited with code = %d", code)
