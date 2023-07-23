@@ -1,11 +1,17 @@
+import * as fs from "fs"
+import * as path from "path"
 import { EventEmitter } from "events"
 import Mic from "~/mic"
 import Vad from "~/vad"
 import DFT from "~/dtf"
 import { MinMax } from "~/utils"
+import sampleToWavAudio from "~/wav"
 
 export class Recorder extends EventEmitter {
   private _micInputStream: any
+  recording: boolean = false
+  delay: number = 0
+  buffers: Int16Array[] = []
 
   constructor() {
     super()
@@ -15,9 +21,11 @@ export class Recorder extends EventEmitter {
     // 音声区間検出開始時ハンドラ
     VadOptions.voice_stop = () => {
       this.emit("voice_stop")
+      this.delay = 5
     }
     // 音声区間検出終了時ハンドラ
     VadOptions.voice_start = () => {
+      this.recording = true
       this.emit("voice_start")
     }
 
@@ -72,6 +80,17 @@ export class Recorder extends EventEmitter {
           n = 0
         }
       }
+      this.buffers.push(buffer)
+      if (this.delay > 0) {
+        this.delay--
+        if (this.delay === 0 && this.recording) {
+          this.transcribe()
+          this.recording = false
+          this.buffers = this.buffers.slice(-3)
+        }
+      } else if (!this.recording) {
+        this.buffers = this.buffers.slice(-3)
+      }
       this.emit("data", { data: buffer })
       // minmax1.print()
     })
@@ -80,27 +99,27 @@ export class Recorder extends EventEmitter {
       console.log("Error in Input Stream: " + err)
     })
 
-    micInputStream.on("startComplete", function () {
+    micInputStream.on("startComplete", () => {
       console.log("Got SIGNAL startComplete")
     })
 
-    micInputStream.on("stopComplete", function () {
+    micInputStream.on("stopComplete", () => {
       console.log("Got SIGNAL stopComplete")
     })
 
-    micInputStream.on("pauseComplete", function () {
+    micInputStream.on("pauseComplete", () => {
       console.log("Got SIGNAL pauseComplete")
     })
 
-    micInputStream.on("resumeComplete", function () {
+    micInputStream.on("resumeComplete", () => {
       console.log("Got SIGNAL resumeComplete")
     })
 
-    micInputStream.on("silence", function () {
+    micInputStream.on("silence", () => {
       console.log("Got SIGNAL silence")
     })
 
-    micInputStream.on("processExitComplete", function () {
+    micInputStream.on("processExitComplete", () => {
       console.log("Got SIGNAL processExitComplete")
     })
 
@@ -111,5 +130,20 @@ export class Recorder extends EventEmitter {
 
   get micInputStream() {
     return this._micInputStream
+  }
+
+  transcribe() {
+    const sampleCount = this.buffers.reduce((memo: number, buffer: Int16Array) => {
+      return memo + buffer.length
+    }, 0)
+    const dataView = new Int16Array(sampleCount)
+    let n = 0
+    for (const buffer of this.buffers) {
+      for (const value of buffer) {
+        dataView[n] = value
+        n++
+      }
+    }
+    this.emit("transcribe", { timestamp: Date(), action: "transcribe", data: dataView })
   }
 }

@@ -4,3 +4,6 @@ build
 /work/*
 !/work/.gitkeep
 *.tsbuildinfo
+__pycache__
+.mypy_cache
+yarn-error.log

@@ -9,10 +9,8 @@ export class audioSettings {
   }
 }
 
-export function sampleToWavAudio(buffers: Int16Array[], settings: audioSettings) {
-  const sampleCount = buffers.reduce((memo: number, buffer: Int16Array) => {
-    return memo + buffer.length
-  }, 0)
+export function sampleToWavAudio(buffer: Int16Array, settings: audioSettings) {
+  const sampleCount = buffer.length
 
   const bytesPerSample = settings.sampleSize / 8
   const bitsPerByte = 8
@@ -57,11 +55,9 @@ export function sampleToWavAudio(buffers: Int16Array[], settings: audioSettings)
 
   let index = 44
 
-  for (const buffer of buffers) {
-    for (const value of buffer) {
-      dataView.setInt16(index, value, true)
-      index += 2
-    }
+  for (const value of buffer) {
+    dataView.setInt16(index, value, true)
+    index += 2
   }
 
   return dataView

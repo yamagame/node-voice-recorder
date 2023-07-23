@@ -3,54 +3,54 @@ import * as path from "path"
 import { Recorder } from "~/recorder"
 import sampleToWavAudio from "~/wav"
 import fetch from "node-fetch"
+import * as dayjs from "dayjs"
+
+const REAZONSPEECH_HOST = process.env["REAZONSPEECH_HOST"] || "http://127.0.0.1:9002"
+
+function printmsg(msg: string) {
+  process.stdout.clearLine(0)
+  process.stdout.write(msg)
+  process.stdout.cursorTo(0)
+}
+
+const timeform = "YYYY/MM/DD hh:mm:ss"
 
 function main() {
   const recorder = new Recorder()
   let count = 0
-  let delay = 0
-  let buffer = []
-  let recording = false
   recorder.on("voice_stop", () => {
-    console.log("voice_stop")
-    delay = 5
+    printmsg("voice_stop")
   })
   recorder.on("voice_start", () => {
-    recording = true
-    console.log("voice_start")
+    printmsg("voice_start")
   })
-  recorder.on("data", (event) => {
-    buffer.push(event.data)
-    if (!recording) {
-      buffer = buffer.slice(-3)
-    }
+  recorder.on("transcribe", async (event) => {
+    const buffer = event.data
+    const wavdata = sampleToWavAudio(buffer, {
+      sampleSize: 16,
+      sampleRate: 48000,
+      channelCount: 1,
+    })
+    const fpath = path.join("./work", `${count++}.wav`)
+    fs.writeFile(fpath, wavdata, (err) => {
+      if (err) throw err
+    })
+    printmsg("start_transcribe")
+    const res = await fetch(`${REAZONSPEECH_HOST}/wav/transcribe`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename: path.basename(fpath) }),
+    })
+    process.stdout.clearLine(0)
+    console.log(
+      JSON.stringify({
+        timestamp: dayjs(event.timestamp).format(timeform),
+        action: "transcribe",
+        ...(await res.json()),
+      })
+    )
   })
-  setInterval(async () => {
-    if (delay > 0) {
-      delay--
-      if (delay === 0 && recording) {
-        recording = false
-        const wavdata = sampleToWavAudio(buffer, {
-          sampleSize: 16,
-          sampleRate: 48000,
-          channelCount: 1,
-        })
-        const fpath = path.join("./work", `${count++}.wav`)
-        fs.writeFile(fpath, wavdata, (err) => {
-          if (err) throw err
-          console.log("The file has been saved!")
-        })
-        const res = await fetch("http://127.0.0.1:9002/wav/transcribe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filename: path.basename(fpath) }),
-        })
-        console.log(await res.json())
-        buffer = buffer.slice(-3)
-      }
-    }
-  }, 100)
-  // const outputFileStream = fs.createWriteStream("./work/output.wav")
-  // recorder.micInputStream.pipe(outputFileStream)
+  console.log(JSON.stringify({ timestamp: dayjs(Date()).format(timeform), action: "start" }))
 }
 
 if (require.main === module) {
