@@ -46,7 +46,7 @@ $ export HUGGINGFACE_TOKEN=XXXXXXXXXXXXXXXXX
 $ docker-compose up -d
 
 # コンテナにログインしてサーバーを起動
-$ docker-compose exec -it reazon-dev bash
+$ docker-compose exec reazon-dev bash
 $ ./scripts/start-server.sh
 ```
 
