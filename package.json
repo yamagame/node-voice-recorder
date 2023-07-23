@@ -12,7 +12,7 @@
     "typescript": "^5.1.6"
   },
   "scripts": {
-    "start": "ts-node -r tsconfig-paths/register src/index.ts",
+    "start": "REAZONSPEECH_RAW=./work/out.raw ts-node -r tsconfig-paths/register src/index.ts",
     "build": "tsc --project tsconfig.build.json && tsc-alias --verbose -p tsconfig.build.json",
     "clean": "rm -rf ./build",
     "ts-node": "ts-node -r tsconfig-paths/register $1",
@@ -42,6 +42,7 @@
   "dependencies": {
     "@types/node-fetch": "^2.6.4",
     "dayjs": "^1.11.9",
-    "node-fetch": "^2.6.12"
+    "node-fetch": "^2.6.12",
+    "ulid": "^2.3.0"
   }
 }

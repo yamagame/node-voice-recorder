@@ -4,25 +4,32 @@ import { Recorder } from "~/recorder"
 import sampleToWavAudio from "~/wav"
 import fetch from "node-fetch"
 import * as dayjs from "dayjs"
+import { Logger } from "~/logger"
+import { ulid } from "ulid"
 
 const REAZONSPEECH_HOST = process.env["REAZONSPEECH_HOST"] || "http://127.0.0.1:9002"
+const REAZONSPEECH_WORK = process.env["REAZONSPEECH_WORK"] || "./work"
+const REAZONSPEECH_RAW = process.env["REAZONSPEECH_RAW"] || ""
+const REAZONSPEECH_LOGFILE = process.env["REAZONSPEECH_LOGFILE"] || ""
 
-function printmsg(msg: string) {
-  process.stdout.clearLine(0)
-  process.stdout.write(msg)
-  process.stdout.cursorTo(0)
-}
+const logger = new Logger({ outdir: REAZONSPEECH_WORK, logfile: REAZONSPEECH_LOGFILE })
 
 const timeform = "YYYY/MM/DD hh:mm:ss"
 
 function main() {
+  const rawfile = REAZONSPEECH_RAW
+  const rawprop: { rawfile?: string } = {}
+  if (rawfile != "") {
+    rawprop.rawfile = `${path.basename(rawfile, path.extname(rawfile))}-${ulid()}${path.extname(
+      rawfile
+    )}`
+  }
   const recorder = new Recorder()
-  let count = 0
   recorder.on("voice_stop", () => {
-    printmsg("voice_stop")
+    logger.print("voice_stop")
   })
   recorder.on("voice_start", () => {
-    printmsg("voice_start")
+    logger.print("voice_start")
   })
   recorder.on("transcribe", async (event) => {
     const buffer = event.data
@@ -31,26 +38,30 @@ function main() {
       sampleRate: 48000,
       channelCount: 1,
     })
-    const fpath = path.join("./work", `${count++}.wav`)
+    const filename = `${logger.filename()}.wav`
+    const fpath = path.join(REAZONSPEECH_WORK, filename)
     fs.writeFile(fpath, wavdata, (err) => {
       if (err) throw err
     })
-    printmsg("start_transcribe")
+    logger.print("start_transcribe")
     const res = await fetch(`${REAZONSPEECH_HOST}/wav/transcribe`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filename: path.basename(fpath) }),
+      body: JSON.stringify({ filename }),
     })
-    process.stdout.clearLine(0)
-    console.log(
-      JSON.stringify({
-        timestamp: dayjs(event.timestamp).format(timeform),
-        action: "transcribe",
-        ...(await res.json()),
-      })
-    )
+    logger.clearLine()
+    logger.log({
+      timestamp: dayjs(event.timestamp).format(timeform),
+      action: "transcribe",
+      ...rawprop,
+      ...(await res.json()),
+    })
   })
-  console.log(JSON.stringify({ timestamp: dayjs(Date()).format(timeform), action: "start" }))
+  if (rawprop.rawfile) {
+    const outputFileStream = fs.createWriteStream(path.join(REAZONSPEECH_WORK, rawprop.rawfile))
+    recorder.micInputStream.pipe(outputFileStream)
+  }
+  logger.log({ timestamp: dayjs(Date()).format(timeform), action: "start", ...rawprop })
 }
 
 if (require.main === module) {
