@@ -21,7 +21,7 @@ export class Recorder extends EventEmitter {
     // 音声区間検出開始時ハンドラ
     VadOptions.voice_stop = () => {
       this.emit("voice_stop")
-      this.delay = 5
+      this.delay = 15
     }
     // 音声区間検出終了時ハンドラ
     VadOptions.voice_start = () => {
