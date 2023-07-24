@@ -14,6 +14,7 @@
   "scripts": {
     "start": "REAZONSPEECH_RAW=./work/out.raw ts-node -r tsconfig-paths/register src/index.ts",
     "build": "tsc --project tsconfig.build.json && tsc-alias --verbose -p tsconfig.build.json",
+    "raw2wav": "ts-node ./src/wav/index.ts $1",
     "clean": "rm -rf ./build",
     "ts-node": "ts-node -r tsconfig-paths/register $1",
     "test": "jest"
