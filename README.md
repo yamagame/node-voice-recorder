@@ -50,6 +50,14 @@ $ docker-compose exec reazon-dev bash
 $ ./scripts/start-server.sh
 ```
 
+Mac では録音コマンドに rec を使用します。sox をインストールしてください。
+
+```sh
+$ brew install sox
+```
+
+Linux では arecord を使用します。
+
 録音側は TypeScript です。Node.js をインストールしてください。
 開発時の Node.js のバージョンは v18.14.2 です。
 
