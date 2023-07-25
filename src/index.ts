@@ -1,7 +1,7 @@
 import * as fs from "fs"
 import * as path from "path"
 import { Recorder } from "~/recorder"
-import sampleToWavAudio from "~/wav"
+import { sampleToWavAudio, audioSettings } from "~/wav"
 import fetch from "node-fetch"
 import * as dayjs from "dayjs"
 import { Logger } from "~/logger"
@@ -33,11 +33,14 @@ function main() {
   })
   recorder.on("transcribe", async (event) => {
     const buffer = event.data
-    const wavdata = sampleToWavAudio(buffer, {
-      sampleSize: 16,
-      sampleRate: 48000,
-      channelCount: 1,
-    })
+    const wavdata = sampleToWavAudio(
+      buffer,
+      new audioSettings({
+        sampleSize: 16,
+        sampleRate: 48000,
+        channelCount: 1,
+      })
+    )
     const filename = `${logger.filename()}.wav`
     const fpath = path.join(REAZONSPEECH_WORK, filename)
     fs.writeFile(fpath, wavdata, (err) => {

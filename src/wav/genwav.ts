@@ -2,10 +2,12 @@ export class audioSettings {
   sampleSize: number = 0
   sampleRate: number = 0
   channelCount: number = 0
-  constructor(settings: MediaTrackSettings) {
+  littleEndian: boolean
+  constructor(settings: MediaTrackSettings, littleEndian = true) {
     if (settings.sampleSize) this.sampleSize = settings.sampleSize
     if (settings.sampleRate) this.sampleRate = settings.sampleRate
     if (settings.channelCount) this.channelCount = settings.channelCount
+    this.littleEndian = littleEndian
   }
 }
 
@@ -56,7 +58,7 @@ export function sampleToWavAudio(buffer: Int16Array, settings: audioSettings) {
   let index = 44
 
   for (const value of buffer) {
-    dataView.setInt16(index, value, true)
+    dataView.setInt16(index, value, settings.littleEndian)
     index += 2
   }
 

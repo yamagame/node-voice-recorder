@@ -1,11 +1,8 @@
-import * as fs from "fs"
-import * as path from "path"
 import { EventEmitter } from "events"
 import Mic from "~/mic"
 import Vad from "~/vad"
 import DFT from "~/dtf"
 import { MinMax } from "~/utils"
-import sampleToWavAudio from "~/wav"
 
 export class Recorder extends EventEmitter {
   private _micInputStream: any
