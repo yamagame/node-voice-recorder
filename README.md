@@ -50,6 +50,13 @@ $ docker-compose exec reazon-dev bash
 $ ./scripts/start-server.sh
 ```
 
+イメージをビルドし直す場合は以下のスクリプトを実行してください。
+
+```sh
+# 再ビルドする場合
+$ ./scripts/rebuld-up.sh
+```
+
 Mac では録音コマンドに rec を使用します。sox をインストールしてください。
 
 ```sh
