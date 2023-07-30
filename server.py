@@ -27,12 +27,6 @@ class Transcribe(BaseModel):
 async def transcribeFromAPI(audio: Transcribe): #recieve data
     outputfile = os.path.join(os.environ.get('WAVE_FILE_DIR', "./work"), Path(audio.filename).stem + ".wav")
 
-    # wavファイルを書き出し
-    # upload_dir = open(outputfile, "wb+")
-    # shutil.copyfileobj(audio.file, upload_dir)
-    # upload_dir.close()
-    # print(outputfile)
-
     lock.acquire()
 
     # whisperの場合
