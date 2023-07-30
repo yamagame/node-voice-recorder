@@ -4,26 +4,34 @@ import Vad from "~/vad"
 import DFT from "~/dtf"
 import { MinMax } from "~/utils"
 
+type RecorderState = "idle" | "recording" | "speaking" | "delay" | "transcribe"
+
 export class Recorder extends EventEmitter {
   private _micInputStream: any
-  recording: boolean = false
   delay: number = 0
   buffers: Int16Array[] = []
+  state: RecorderState = "idle"
+  _recording: boolean = false
 
   constructor() {
     super()
 
     // VAD のオプション設定 (詳細後述)
     const VadOptions = new Vad.VADProps()
-    // 音声区間検出開始時ハンドラ
-    VadOptions.voice_stop = () => {
-      this.emit("voice_stop")
-      this.delay = 15
-    }
     // 音声区間検出終了時ハンドラ
+    VadOptions.voice_stop = () => {
+      if (this._recording) {
+        this.emit("voice_stop")
+        this.state = "delay"
+        this.delay = 15
+      }
+    }
+    // 音声区間検出開始時ハンドラ
     VadOptions.voice_start = () => {
-      this.recording = true
-      this.emit("voice_start")
+      if (this._recording) {
+        this.state = "recording"
+        this.emit("voice_start")
+      }
     }
 
     const vad = new Vad.VAD(VadOptions)
@@ -78,14 +86,15 @@ export class Recorder extends EventEmitter {
         }
       }
       this.buffers.push(buffer)
-      if (this.delay > 0) {
+      if (this.delay > 0 && this.state !== "idle") {
         this.delay--
-        if (this.delay === 0 && this.recording) {
+        if (this.delay === 0) {
           this.transcribe()
-          this.recording = false
-          this.buffers = this.buffers.slice(-3)
+          if (this.state === "delay") {
+            this.state = "idle"
+          }
         }
-      } else if (!this.recording) {
+      } else if (this.state === "idle") {
         this.buffers = this.buffers.slice(-3)
       }
       this.emit("data", { data: buffer })
@@ -129,7 +138,34 @@ export class Recorder extends EventEmitter {
     return this._micInputStream
   }
 
+  pause() {
+    this._recording = false
+    this.state = "idle"
+    this.delay = 0
+  }
+
+  resume() {
+    this._recording = true
+    this.state = "idle"
+    this.delay = 0
+  }
+
+  set recording(state: boolean) {
+    this._recording = state
+    if (state) {
+      this.resume()
+    } else {
+      this.pause()
+    }
+  }
+
+  isRecording() {
+    return this._recording
+  }
+
   transcribe() {
+    if (this.buffers.length <= 0) return
+    if (this.state != "delay") return
     const sampleCount = this.buffers.reduce((memo: number, buffer: Int16Array) => {
       return memo + buffer.length
     }, 0)

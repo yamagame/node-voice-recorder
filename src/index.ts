@@ -1,5 +1,6 @@
 import * as fs from "fs"
 import * as path from "path"
+import * as readline from "readline"
 import { Recorder } from "~/recorder"
 import { sampleToWavAudio, audioSettings } from "~/wav"
 import fetch from "node-fetch"
@@ -65,6 +66,24 @@ function main() {
     recorder.micInputStream.pipe(outputFileStream)
   }
   logger.log({ timestamp: dayjs(Date()).format(timeform), action: "start", ...rawprop })
+
+  const r = readline.createInterface({
+    input: process.stdin,
+    terminal: false,
+  })
+
+  let toggle = true
+  recorder.recording = toggle
+
+  r.on("line", (line) => {
+    toggle = !toggle
+    recorder.recording = toggle
+    if (toggle) {
+      logger.print("ReazonSpeech ON")
+    } else {
+      logger.print("ReazonSpeech OFF")
+    }
+  })
 }
 
 if (require.main === module) {
