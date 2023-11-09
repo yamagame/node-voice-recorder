@@ -75,3 +75,14 @@ $ npm install
 # 録音開始
 $ npm run start
 ```
+
+## ロボットエージェント連携
+
+[yamagame/llama-chat ](https://github.com/yamagame/llama-chat.git) と連携することで、音声認識対話が可能です。
+
+```
+$ VOICE_RECORDER_SERVER_PORT=3093 VOICE_RECORDER_ENERGY_POS=5 AGENT_HOST=http://localhost:3092 yarn start
+```
+
+- VOICE_RECORDER_SERVER_PORT: llama-chat からの音声認識リクエストを受け付けるためのポート
+- VOICE_RECORDER_ENERGY_POS: 音声認識のマイク感度、大きいほど感度が下がる

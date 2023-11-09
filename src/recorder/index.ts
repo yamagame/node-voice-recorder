@@ -13,7 +13,12 @@ export class Recorder extends EventEmitter {
   state: RecorderState = "idle"
   _recording: boolean = false
 
-  constructor() {
+  constructor(
+    { energyThresholdRatioPos, energyThresholdRatioNeg } = {
+      energyThresholdRatioPos: 2,
+      energyThresholdRatioNeg: 0.5,
+    }
+  ) {
     super()
 
     // VAD のオプション設定 (詳細後述)
@@ -33,6 +38,8 @@ export class Recorder extends EventEmitter {
         this.emit("voice_start")
       }
     }
+    VadOptions.energy_threshold_ratio_pos = energyThresholdRatioPos
+    VadOptions.energy_threshold_ratio_neg = energyThresholdRatioNeg
 
     const vad = new Vad.VAD(VadOptions)
     const micInstance = new Mic({

@@ -7,11 +7,17 @@ import fetch from "node-fetch"
 import * as dayjs from "dayjs"
 import { Logger } from "~/logger"
 import { ulid } from "ulid"
+import { start_server } from "~/server"
+import { ngword } from "./ngword"
 
 const REAZONSPEECH_HOST = process.env["REAZONSPEECH_HOST"] || "http://127.0.0.1:9002"
 const REAZONSPEECH_WORK = process.env["REAZONSPEECH_WORK"] || "./work"
 const REAZONSPEECH_RAW = process.env["REAZONSPEECH_RAW"] || ""
 const REAZONSPEECH_LOGFILE = process.env["REAZONSPEECH_LOGFILE"] || ""
+const AGENT_HOST = process.env["AGENT_HOST"] || ""
+const VOICE_RECORDER_SERVER_PORT = process.env["VOICE_RECORDER_SERVER_PORT"] || "0"
+const VOICE_RECORDER_ENERGY_POS = process.env["VOICE_RECORDER_ENERGY_POS"] || "2"
+const VOICE_RECORDER_ENERGY_NEG = process.env["VOICE_RECORDER_ENERGY_NEG"] || "0.5"
 
 const logger = new Logger({ outdir: REAZONSPEECH_WORK, logfile: REAZONSPEECH_LOGFILE })
 
@@ -25,7 +31,10 @@ function main() {
       rawfile
     )}`
   }
-  const recorder = new Recorder()
+  const recorder = new Recorder({
+    energyThresholdRatioPos: parseFloat(VOICE_RECORDER_ENERGY_POS),
+    energyThresholdRatioNeg: parseFloat(VOICE_RECORDER_ENERGY_NEG),
+  })
   recorder.on("voice_stop", () => {
     logger.print("voice_stop")
   })
@@ -54,18 +63,34 @@ function main() {
       body: JSON.stringify({ filename }),
     })
     logger.clearLine()
-    logger.log({
+    const payload = await res.json()
+    const data = {
       timestamp: dayjs(event.timestamp).format(timeform),
       action: "transcribe",
       ...rawprop,
-      ...(await res.json()),
-    })
+      ...(payload as any),
+    }
+    logger.log(data)
+    if (AGENT_HOST != "") {
+      const { text } = payload
+      if (ngword.indexOf(text) < 0) {
+        try {
+          await fetch(`${AGENT_HOST}/transcribe`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+          })
+          recorder.recording = false
+        } catch (err) {
+          console.error(err)
+        }
+      }
+    }
   })
   if (rawprop.rawfile) {
     const outputFileStream = fs.createWriteStream(path.join(REAZONSPEECH_WORK, rawprop.rawfile))
     recorder.micInputStream.pipe(outputFileStream)
   }
-  logger.log({ timestamp: dayjs(Date()).format(timeform), action: "start", ...rawprop })
 
   const r = readline.createInterface({
     input: process.stdin,
@@ -73,6 +98,12 @@ function main() {
   })
 
   let toggle = true
+
+  if (VOICE_RECORDER_SERVER_PORT !== "0") {
+    toggle = false
+    start_server(recorder, parseInt(VOICE_RECORDER_SERVER_PORT))
+  }
+
   recorder.recording = toggle
 
   r.on("line", (line) => {
@@ -84,6 +115,10 @@ function main() {
       logger.print("ReazonSpeech OFF")
     }
   })
+
+  if (recorder.recording) {
+    logger.log({ timestamp: dayjs(Date()).format(timeform), action: "start", ...rawprop })
+  }
 }
 
 if (require.main === module) {
